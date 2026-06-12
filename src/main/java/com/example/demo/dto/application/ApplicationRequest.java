@@ -1,12 +1,11 @@
 package com.example.demo.dto.application;
 
-import lombok.*;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 public class ApplicationRequest {
 
+    @NotNull(message = "Job id is required")
     private Long jobId;
 }

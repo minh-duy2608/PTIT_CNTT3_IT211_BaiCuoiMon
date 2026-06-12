@@ -1,13 +1,15 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.*;
-import com.example.demo.entity.*;
-import com.example.demo.repository.*;
+import com.example.demo.service.JobService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.data.domain.Page;
 import java.util.List;
 
 @RestController
@@ -15,45 +17,36 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobController {
 
-    private final JobRepository jobRepository;
-    private final UserRepository userRepository;
+    private final JobService jobService;
 
+    @PreAuthorize("hasRole('EMPLOYER')")
     @PostMapping
     public JobResponse createJob(
+            @Valid
             @RequestBody JobRequest request,
             Authentication authentication
     ) {
 
-        User employer =
-                userRepository
-                        .findByEmail(
-                                authentication.getName()
-                        )
-                        .orElseThrow();
-
-        Job job = Job.builder()
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .location(request.getLocation())
-                .salary(request.getSalary())
-                .approved(false)
-                .createdAt(LocalDateTime.now())
-                .employer(employer)
-                .build();
-
-        jobRepository.save(job);
-
-        return map(job);
+        return jobService.createJob(
+                request,
+                authentication
+        );
     }
 
     @GetMapping
-    public List<JobResponse> getAllJobs() {
+    public Page<JobResponse> getAllJobs(
 
-        return jobRepository
-                .findAll()
-                .stream()
-                .map(this::map)
-                .toList();
+            @RequestParam(defaultValue = "0")
+            int page,
+
+            @RequestParam(defaultValue = "10")
+            int size
+    ) {
+
+        return jobService.getAllJobs(
+                page,
+                size
+        );
     }
 
     @GetMapping("/{id}")
@@ -61,27 +54,29 @@ public class JobController {
             @PathVariable Long id
     ) {
 
-        Job job =
-                jobRepository
-                        .findById(id)
-                        .orElseThrow();
-
-        return map(job);
+        return jobService.getJob(id);
     }
 
-    private JobResponse map(Job job) {
+    @PreAuthorize("hasRole('EMPLOYER')")
+    @PutMapping("/{id}")
+    public JobResponse updateJob(
+            @PathVariable Long id,
+            @Valid
+            @RequestBody JobRequest request
+    ) {
 
-        return JobResponse.builder()
-                .id(job.getId())
-                .title(job.getTitle())
-                .description(job.getDescription())
-                .location(job.getLocation())
-                .salary(job.getSalary())
-                .approved(job.isApproved())
-                .employerName(
-                        job.getEmployer()
-                                .getFullName()
-                )
-                .build();
+        return jobService.updateJob(
+                id,
+                request
+        );
+    }
+
+    @PreAuthorize("hasRole('EMPLOYER')")
+    @DeleteMapping("/{id}")
+    public void deleteJob(
+            @PathVariable Long id
+    ) {
+
+        jobService.deleteJob(id);
     }
 }

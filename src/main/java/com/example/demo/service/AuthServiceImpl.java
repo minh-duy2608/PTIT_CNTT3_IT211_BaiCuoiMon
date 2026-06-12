@@ -3,24 +3,28 @@ package com.example.demo.service;
 import com.example.demo.dto.auth.*;
 import com.example.demo.entity.*;
 import com.example.demo.enums.RoleName;
+import com.example.demo.exception.BadRequestException;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.*;
 import com.example.demo.security.JwtService;
-import com.example.demo.service.AuthService;
-import com.example.demo.service.RefreshTokenService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.security.authentication.*;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Set;
 
+@Slf4j
 @Service
+@Transactional
 @RequiredArgsConstructor
-public class AuthServiceImpl
-        implements AuthService {
+public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
 
@@ -40,26 +44,35 @@ public class AuthServiceImpl
     public void register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
-
-            throw new RuntimeException("Email already exists");
+            throw new BadRequestException(
+                    "Email already exists"
+            );
         }
 
         Role role = roleRepository.findByName(
                 RoleName.valueOf(request.getRole())
-        ).orElseThrow();
+        ).orElseThrow(
+                () -> new ResourceNotFoundException(
+                        "Role not found"
+                )
+        );
 
-        User user =
-                User.builder()
-                        .fullName(request.getFullName())
-                        .email(request.getEmail())
-                        .password(
-                                passwordEncoder.encode(
-                                        request.getPassword()
-                                )
+        User user = User.builder()
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .password(
+                        passwordEncoder.encode(
+                                request.getPassword()
                         )
-                        .enabled(true)
-                        .roles(Set.of(role))
-                        .build();
+                )
+                .enabled(true)
+                .roles(Set.of(role))
+                .build();
+
+        log.info(
+                "Register user: {}",
+                request.getEmail()
+        );
 
         userRepository.save(user);
     }
@@ -74,10 +87,18 @@ public class AuthServiceImpl
                 )
         );
 
-        User user =
-                userRepository.findByEmail(
-                        request.getEmail()
-                ).orElseThrow();
+        User user = userRepository.findByEmail(
+                request.getEmail()
+        ).orElseThrow(
+                () -> new ResourceNotFoundException(
+                        "User not found"
+                )
+        );
+
+        log.info(
+                "Login success: {}",
+                request.getEmail()
+        );
 
         String accessToken =
                 jwtService.generateAccessToken(
@@ -98,7 +119,8 @@ public class AuthServiceImpl
 
     @Override
     public JwtResponse refreshToken(
-            RefreshTokenRequest request) {
+            RefreshTokenRequest request
+    ) {
 
         RefreshToken refreshToken =
                 refreshTokenService.verifyToken(
@@ -124,11 +146,14 @@ public class AuthServiceImpl
                 TokenBlacklist.builder()
                         .token(token)
                         .expiredAt(
-                                LocalDateTime.now().plusDays(1)
+                                LocalDateTime.now()
+                                        .plusDays(1)
                         )
                         .build();
 
         blacklistRepository.save(blacklist);
+
+        log.info("User logout");
     }
 
     @Override
@@ -137,16 +162,23 @@ public class AuthServiceImpl
     ) {
 
         User user =
-                userRepository
-                        .findByEmail(
-                                request.getEmail()
+                userRepository.findByEmail(
+                        request.getEmail()
+                ).orElseThrow(
+                        () -> new ResourceNotFoundException(
+                                "User not found"
                         )
-                        .orElseThrow();
+                );
 
         user.setPassword(
                 passwordEncoder.encode(
                         request.getNewPassword()
                 )
+        );
+
+        log.info(
+                "Password changed for: {}",
+                request.getEmail()
         );
 
         userRepository.save(user);

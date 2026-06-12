@@ -1,12 +1,11 @@
 package com.example.demo.dto.application;
 
-import lombok.*;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 public class ApplicationStatusUpdateRequest {
 
+    @NotBlank(message = "Status is required")
     private String status;
 }

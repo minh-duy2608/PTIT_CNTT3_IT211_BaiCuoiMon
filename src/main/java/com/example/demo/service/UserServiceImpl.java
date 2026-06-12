@@ -21,13 +21,30 @@ public class UserServiceImpl implements UserService {
     public Page<UserDto> getAll(
             int page,
             int size,
-            String keyword) {
+            String keyword
+    ) {
 
         Pageable pageable =
                 PageRequest.of(page, size);
 
-        Page<User> users =
-                userRepository.findAll(pageable);
+        Page<User> users;
+
+        if (keyword != null
+                && !keyword.trim().isEmpty()) {
+
+            users =
+                    userRepository
+                            .findByFullNameContainingIgnoreCase(
+                                    keyword,
+                                    pageable
+                            );
+        } else {
+
+            users =
+                    userRepository.findAll(
+                            pageable
+                    );
+        }
 
         return users.map(user ->
                 UserDto.builder()

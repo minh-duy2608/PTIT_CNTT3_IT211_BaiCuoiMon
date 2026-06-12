@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.auth.*;
 import com.example.demo.dto.response.MessageResponse;
 import com.example.demo.service.AuthService;
+import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
@@ -17,6 +18,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public MessageResponse register(
+            @Valid
             @RequestBody RegisterRequest request) {
 
         authService.register(request);
@@ -28,6 +30,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public JwtResponse login(
+            @Valid
             @RequestBody LoginRequest request) {
 
         return authService.login(request);
@@ -35,6 +38,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public JwtResponse refreshToken(
+            @Valid
             @RequestBody RefreshTokenRequest request) {
 
         return authService.refreshToken(request);
@@ -57,6 +61,7 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public MessageResponse forgotPassword(
+            @Valid
             @RequestBody ForgotPasswordRequest request
     ) {
 
