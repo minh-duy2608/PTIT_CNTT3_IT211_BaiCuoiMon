@@ -3,15 +3,16 @@ package com.example.demo.service;
 import com.example.demo.entity.RefreshToken;
 import com.example.demo.entity.User;
 import com.example.demo.repository.RefreshTokenRepository;
-import com.example.demo.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class RefreshTokenServiceImpl
         implements RefreshTokenService {
 
@@ -21,14 +22,15 @@ public class RefreshTokenServiceImpl
     public RefreshToken createRefreshToken(User user) {
 
         repository.findByUser(user)
-                .ifPresent(repository::delete);
+                .ifPresent(token -> {
+                    repository.delete(token);
+                    repository.flush();
+                });
 
         RefreshToken refreshToken =
                 RefreshToken.builder()
                         .token(UUID.randomUUID().toString())
-                        .expiryDate(
-                                LocalDateTime.now().plusDays(7)
-                        )
+                        .expiryDate(LocalDateTime.now().plusDays(7))
                         .user(user)
                         .build();
 
