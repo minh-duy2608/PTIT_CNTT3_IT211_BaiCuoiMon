@@ -5,6 +5,7 @@ import com.example.demo.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
+import com.example.demo.dto.response.MessageResponse;
 
 @RestController
 @RequestMapping("/api/v1/admin/users")
@@ -48,9 +49,13 @@ public class AdminUserController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(
+    public MessageResponse delete(
             @PathVariable Long id) {
 
         userService.delete(id);
+
+        return MessageResponse.builder()
+                .message("Delete user success")
+                .build();
     }
 }

@@ -10,12 +10,25 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import com.example.demo.entity.Job;
+import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.repository.ApplicationRepository;
+import com.example.demo.repository.JobRepository;
+import com.example.demo.repository.RefreshTokenRepository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final ApplicationRepository applicationRepository;
+
+    private final JobRepository jobRepository;
+
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     public Page<UserDto> getAll(
@@ -98,13 +111,27 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
 
         User user =
                 userRepository.findById(id)
                         .orElseThrow(
-                                () -> new RuntimeException("User not found")
+                                () -> new ResourceNotFoundException("User not found")
                         );
+
+        applicationRepository.deleteByCandidate(user);
+
+        List<Job> jobs = jobRepository.findByEmployer(user);
+
+        for (Job job : jobs) {
+            applicationRepository.deleteByJob(job);
+        }
+
+        jobRepository.deleteByEmployer(user);
+
+        refreshTokenRepository.findByUser(user)
+                .ifPresent(refreshTokenRepository::delete);
 
         userRepository.delete(user);
     }
